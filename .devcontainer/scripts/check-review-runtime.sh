@@ -67,7 +67,7 @@ require_command gocryptfs
 require_command fuse2fs
 require_command bluefin
 require_command yq
-require_headroom_profile
+#require_headroom_profile
 printf '\n'
 if [ -e /dev/fuse ]; then
   echo '/dev/fuse: READY'
