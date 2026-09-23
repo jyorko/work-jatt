@@ -26,8 +26,7 @@ The bootstrap invokes each setup script through `/bin/bash`, so the lifecycle
 does not depend on executable bits being preserved by the workspace checkout.
 The runtime setup installs `gh`, `apptainer`, `squashfuse`, `gocryptfs`, and `yq`, and
 the final check reports a clear error if a required command is still missing.
-Review inherits the shared OMP configuration and configures the Headroom provider
-through `configure-omp-headroom.sh`.
+Review inherits the shared OMP configuration via `BLUEFIN_REVIEW_INHERIT_OMP_CONFIG`.
 
 The source updater is safe to rerun: it refuses to touch a checkout with local
 changes or a branch that has diverged from upstream instead of force-resetting

@@ -23,6 +23,4 @@ run_script prepare-review-source.sh
 run_script build-fuse2fs.sh
 run_script stage-josh-room.sh
 
-# Configure the Headroom-backed OMP profile.
-#run_script configure-omp-headroom.sh
 run_script check-review-runtime.sh

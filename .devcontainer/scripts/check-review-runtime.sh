@@ -31,29 +31,10 @@ for variable_name in \
   HOMEBREW_NO_ANALYTICS \
   REVIEW_UPSTREAM_REF \
   BLUEFIN_REVIEW_INHERIT_OMP_CONFIG \
-  HEADROOM_BASE_URL \
   LUNA_FACTORY_ENABLED \
   LUNA_FACTORY_CAPACITY; do
   require_environment "${variable_name}"
 done
-
-require_headroom_profile() {
-  local models_file="${HOME}/.omp/profiles/review/agent/models.yml"
-
-  if [ ! -f "${models_file}" ]; then
-    echo "ERROR: Headroom OMP profile is missing: ${models_file}" >&2
-    return 1
-  fi
-
-  if HEADROOM_BASE_URL="${HEADROOM_BASE_URL}" yq -e \
-    '.providers."openai-codex".baseUrl == strenv(HEADROOM_BASE_URL)' \
-    "${models_file}" >/dev/null; then
-    printf '%-36s %s\n' 'Headroom OMP profile:' "${models_file}"
-  else
-    echo "ERROR: Headroom OMP profile does not match HEADROOM_BASE_URL: ${models_file}" >&2
-    return 1
-  fi
-}
 
 printf '\n=== Review source ===\n'
 git -C "${HOME}/src/review" log -1 --oneline
@@ -67,7 +48,6 @@ require_command gocryptfs
 require_command fuse2fs
 require_command bluefin
 require_command yq
-require_headroom_profile
 printf '\n'
 if [ -e /dev/fuse ]; then
   echo '/dev/fuse: READY'
