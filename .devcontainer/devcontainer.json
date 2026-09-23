@@ -1,3 +1,41 @@
 {
-   "image": "ghcr.io/joshyorko/room-of-requirement:wolfi"
+    "$schema": "../.vscode/devsy-devcontainer.schema.json",
+    "name": "Room of Requirement - Review Lab",
+    "image": "ghcr.io/joshyorko/room-of-requirement:wolfi",
+    "remoteUser": "vscode",
+    "privileged": true,
+    "overrideCommand": false,
+    "mounts": [
+        "source=ror-codex-vscode-home-${devcontainerId},target=/home/vscode,type=volume"
+    ],
+    "containerEnv": {
+        "DEV_CONTAINERS_SKIP_GCOMPAT_INSTALL": "true",
+        "HOMEBREW_NO_ANALYTICS": "1",
+        "REVIEW_UPSTREAM_REF": "main",
+        "HEADROOM_BASE_URL": "http://10.10.10.89/v1",
+        "BLUEFIN_REVIEW_INHERIT_OMP_CONFIG": "1",
+        "LUNA_FACTORY_ENABLED": "0",
+        "LUNA_FACTORY_CAPACITY": "3",
+        "REVIEW_TEST_KVM_DEVICE": "/dev/bluefin-no-kvm"
+    },
+    "remoteEnv": {
+        "SHELL": "/bin/zsh",
+        "HOMEBREW_NO_ANALYTICS": "1"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "/home/vscode/.cache/josh-room/josh-room-0.1.24.vsix"
+            ]
+        }
+    },
+    "waitFor": "postStartCommand",
+    "postCreateCommand": [
+        "/bin/bash",
+        "${containerWorkspaceFolder}/.devcontainer/scripts/bootstrap-review.sh"
+    ],
+    "postStartCommand": [
+        "/bin/bash",
+        "${containerWorkspaceFolder}/.devcontainer/scripts/ensure-review-runtime.sh"
+    ]
 }
