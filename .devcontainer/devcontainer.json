@@ -12,10 +12,9 @@
         "DEV_CONTAINERS_SKIP_GCOMPAT_INSTALL": "true",
         "HOMEBREW_NO_ANALYTICS": "1",
         "REVIEW_UPSTREAM_REF": "main",
-        // Optional Headroom setting from the reference configuration; disabled for now.
-        // "HEADROOM_BASE_URL": "http://10.10.10.89/v1",
+        //"HEADROOM_BASE_URL": "http://10.10.10.89/v1",
         "BLUEFIN_REVIEW_INHERIT_OMP_CONFIG": "1",
-        "LUNA_FACTORY_ENABLED": "1",
+        "LUNA_FACTORY_ENABLED": "0",
         "LUNA_FACTORY_CAPACITY": "3",
         "REVIEW_TEST_KVM_DEVICE": "/dev/bluefin-no-kvm"
     },

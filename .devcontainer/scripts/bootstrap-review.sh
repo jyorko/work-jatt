@@ -22,8 +22,7 @@ run_script install-review-package.sh
 run_script prepare-review-source.sh
 run_script build-fuse2fs.sh
 run_script stage-josh-room.sh
-run_script check-review-runtime.sh
 
-# Optional Headroom-backed OMP profile; disabled until it is needed.
-# Set HEADROOM_BASE_URL in devcontainer.json and uncomment this line to enable.
-# run_script configure-omp-headroom.sh
+# Configure the Headroom-backed OMP profile.
+#run_script configure-omp-headroom.sh
+run_script check-review-runtime.sh
