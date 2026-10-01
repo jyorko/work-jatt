@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 if /bin/bash "${SCRIPT_DIR}/check-review-runtime.sh"; then
+  /bin/bash "${SCRIPT_DIR}/stage-josh-room.sh"
   echo 'Review runtime is ready.'
   exit 0
 else

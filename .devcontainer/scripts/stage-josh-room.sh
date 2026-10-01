@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="0.1.24"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=.devcontainer/josh-room.env
+source "${JOSH_ROOM_PIN_FILE:-${SCRIPT_DIR}/../josh-room.env}"
 URL="https://github.com/joshyorko/josh-room/releases/download/v${VERSION}-standalone-vsix/josh-room-${VERSION}.vsix"
-EXPECTED_SHA256="c2768bf96edf70f4cd8b187754d89d6ea84a59afb7634224a6830873b0e48e7d"
-CACHE_DIR="/home/vscode/.cache/josh-room"
+CACHE_DIR="${JOSH_ROOM_CACHE_DIR:-${HOME}/.cache/josh-room}"
 VSIX="${CACHE_DIR}/josh-room-${VERSION}.vsix"
+STABLE_VSIX="${CACHE_DIR}/josh-room.vsix"
 
 sha256_for() {
   local file="$1"
@@ -20,10 +22,23 @@ sha256_for() {
   fi
 }
 
+stage_stable_vsix() {
+  if [ -f "${STABLE_VSIX}" ] && [ "$(sha256_for "${STABLE_VSIX}")" = "${EXPECTED_SHA256}" ]; then
+    return
+  fi
+  tmp="$(mktemp "${CACHE_DIR}/.josh-room-stable.XXXXXX")"
+  trap 'rm -f "${tmp}"' EXIT
+  cp "${VSIX}" "${tmp}"
+  chmod 0644 "${tmp}"
+  mv -f "${tmp}" "${STABLE_VSIX}"
+  trap - EXIT
+}
+
 mkdir -p "${CACHE_DIR}"
 
 if [ -f "${VSIX}" ] && [ "$(sha256_for "${VSIX}")" = "${EXPECTED_SHA256}" ]; then
   echo "Josh Room ${VERSION} VSIX is already staged at ${VSIX}."
+  stage_stable_vsix
   exit 0
 fi
 
@@ -53,4 +68,5 @@ chmod 0644 "${tmp}"
 mv -f "${tmp}" "${VSIX}"
 trap - EXIT
 
+stage_stable_vsix
 echo "Staged Josh Room ${VERSION} VSIX at ${VSIX}."

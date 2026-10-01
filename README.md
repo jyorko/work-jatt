@@ -18,9 +18,22 @@ missing. The bootstrap also runs
 [.devcontainer/scripts/stage-josh-room.sh](.devcontainer/scripts/stage-josh-room.sh),
 which downloads the pinned Josh Room VSIX from its GitHub release, verifies its
 SHA-256 checksum, and stores it at
-`/home/vscode/.cache/josh-room/josh-room-0.1.24.vsix`. The
+`/home/vscode/.cache/josh-room/josh-room.vsix`. The
 `customizations.vscode.extensions` entry points Devsy at that stable path, so
 extension installation happens only after the VS Code server is available.
+
+The version and SHA-256 checksum live in
+[.devcontainer/josh-room.env](.devcontainer/josh-room.env). To update them from a
+published release, run from the repository root on the host or inside the
+devcontainer:
+
+    bash .vscode/update-josh-room.sh 0.1.26
+
+The updater reads the release's `SHA256SUMS`, downloads and verifies the VSIX,
+and only then changes the pin. You can also pass a known SHA-256 as the second
+argument. The devcontainer extension path stays the same across releases.
+Staging uses the current user's `~/.cache/josh-room`; set
+`JOSH_ROOM_CACHE_DIR` to override it.
 
 The bootstrap invokes each setup script through `/bin/bash`, so the lifecycle
 does not depend on executable bits being preserved by the workspace checkout.
@@ -38,6 +51,10 @@ extension is staged locally rather than referenced by a Marketplace ID. To
 install or reinstall it manually after attaching to VS Code, run:
 
     sh .vscode/install-josh-room.sh
+
+Run the install command inside the attached devcontainer to update its
+extension, or on the host to update the host's VS Code installation. Reload
+the VS Code window after installation to load the new version.
 
 The `$schema` entry in `devcontainer.json` points to
 `.vscode/devsy-devcontainer.schema.json`. The standard Dev Container schema

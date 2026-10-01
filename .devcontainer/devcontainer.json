@@ -24,7 +24,7 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "/home/vscode/.cache/josh-room/josh-room-0.1.24.vsix"
+                "/home/vscode/.cache/josh-room/josh-room.vsix"
             ]
         }
     },
