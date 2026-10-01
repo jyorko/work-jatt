@@ -1,7 +1,10 @@
 {
     "$schema": "../.vscode/devsy-devcontainer.schema.json",
     "name": "Room of Requirement - Review Lab",
-    "image": "ghcr.io/joshyorko/room-of-requirement:wolfi",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "."
+    },
     "remoteUser": "vscode",
     "privileged": true,
     "overrideCommand": false,
@@ -11,6 +14,7 @@
     "containerEnv": {
         "DEV_CONTAINERS_SKIP_GCOMPAT_INSTALL": "true",
         "HOMEBREW_NO_ANALYTICS": "1",
+        "TZ": "Etc/UTC",
         "REVIEW_UPSTREAM_REF": "main",
         "BLUEFIN_REVIEW_INHERIT_OMP_CONFIG": "1",
         "LUNA_FACTORY_ENABLED": "0",
