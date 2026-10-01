@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
-VERSION="0.1.24"
-VSIX="/home/vscode/.cache/josh-room/josh-room-${VERSION}.vsix"
-
-SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+SCRIPT_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
+# shellcheck source=.devcontainer/josh-room.env
+. "${SCRIPT_DIR}/../.devcontainer/josh-room.env"
+VSIX="${JOSH_ROOM_CACHE_DIR:-${HOME}/.cache/josh-room}/josh-room-${VERSION}.vsix"
 /bin/bash "${SCRIPT_DIR}/../.devcontainer/scripts/stage-josh-room.sh"
 
 CODE_CLIS=""
