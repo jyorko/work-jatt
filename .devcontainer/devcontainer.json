@@ -1,10 +1,7 @@
 {
     "$schema": "../.vscode/devsy-devcontainer.schema.json",
     "name": "Room of Requirement - Review Lab",
-    "build": {
-        "dockerfile": "Dockerfile",
-        "context": "."
-    },
+    "image": "ghcr.io/joshyorko/room-of-requirement:wolfi",
     "remoteUser": "vscode",
     "privileged": true,
     "overrideCommand": false,

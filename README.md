@@ -8,10 +8,8 @@ Review tooling after the container is created, verify or repair the runtime each
 time the container starts, and stage Josh Room before Devsy configures the IDE.
 Devsy then installs the staged VSIX through its VS Code customization lifecycle.
 
-The devcontainer builds [.devcontainer/Dockerfile](.devcontainer/Dockerfile) on
-top of the published Wolfi image. It creates `/etc/localtime` as a link to UTC,
-which Apptainer requires for its configured host bind; setting `TZ` alone does
-not provide that file.
+The devcontainer uses the published Wolfi image directly, matching the working
+personal setup and avoiding a Dockerless build on Kubernetes.
 
 The post-create hook delegates to named scripts in
 [.devcontainer/scripts](.devcontainer/scripts), which install the Review
