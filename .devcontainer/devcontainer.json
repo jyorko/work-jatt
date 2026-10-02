@@ -9,7 +9,6 @@
         "source=ror-codex-vscode-home-${devcontainerId},target=/home/vscode,type=volume"
     ],
     "containerEnv": {
-        "PATH": "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "DEV_CONTAINERS_SKIP_GCOMPAT_INSTALL": "true",
         "HOMEBREW_NO_ANALYTICS": "1",
         "TZ": "Etc/UTC",
@@ -37,9 +36,6 @@
     ],
     "postStartCommand": [
         "/bin/bash",
-        "-c",
-        "sudo -n ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime && exec /bin/bash \"$1\"",
-        "--",
         "${containerWorkspaceFolder}/.devcontainer/scripts/ensure-review-runtime.sh"
     ]
 }
