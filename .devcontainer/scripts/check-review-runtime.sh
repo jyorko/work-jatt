@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin:${PATH}"
+export PATH="${HOME}/.local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin:${PATH}"
 
 require_environment() {
   local variable_name="$1"
@@ -48,6 +48,7 @@ require_command gocryptfs
 require_command fuse2fs
 require_command bluefin
 require_command yq
+require_command codex
 printf '\n'
 if [ -e /dev/fuse ]; then
   echo '/dev/fuse: READY'

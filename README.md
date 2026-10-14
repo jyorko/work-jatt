@@ -40,8 +40,11 @@ Staging uses the current user's `~/.cache/josh-room`; set
 
 The bootstrap invokes each setup script through `/bin/bash`, so the lifecycle
 does not depend on executable bits being preserved by the workspace checkout.
-The runtime setup installs `gh`, `apptainer`, `squashfuse`, `gocryptfs`, and `yq`, and
-the final check reports a clear error if a required command is still missing.
+The runtime setup installs `gh`, `apptainer`, `squashfuse`, `gocryptfs`, and `yq` via
+Homebrew, and the Codex CLI via its official installer
+(`curl -fsSL https://chatgpt.com/codex/install.sh | sh`, which stages the binary at
+`~/.local/bin/codex`). The final check reports a clear error if a required
+command is still missing.
 Review inherits the shared OMP configuration via `BLUEFIN_REVIEW_INHERIT_OMP_CONFIG`.
 
 The source updater is safe to rerun: it refuses to touch a checkout with local
