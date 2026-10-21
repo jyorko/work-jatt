@@ -1,19 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-  echo 'Usage: bash .vscode/update-josh-room.sh VERSION [SHA256]' >&2
+if [ "$#" -gt 2 ]; then
+  echo 'Usage: bash .vscode/update-josh-room.sh [VERSION [SHA256]]' >&2
   exit 1
 fi
 
-VERSION="${1#v}"
-VERSION="${VERSION%-standalone-vsix}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [ "$#" -eq 0 ]; then
+  RELEASE_JSON="$(curl --fail --location --silent --show-error \
+    https://api.github.com/repos/joshyorko/josh-room/releases/latest)"
+  RELEASE_TAG="$(sed -nE 's/^[[:space:]]*"tag_name":[[:space:]]*"([^"]+)".*/\1/p' <<< "${RELEASE_JSON}")"
+  if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-standalone-vsix$ ]]; then
+    echo 'ERROR: could not find a latest Josh Room release with a supported standalone VSIX tag.' >&2
+    exit 1
+  fi
+  VERSION="${RELEASE_TAG#v}"
+  VERSION="${VERSION%-standalone-vsix}"
+else
+  VERSION="${1#v}"
+  VERSION="${VERSION%-standalone-vsix}"
+fi
+
 if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo 'ERROR: expected a version such as 0.1.26 or v0.1.26-standalone-vsix.' >&2
   exit 1
 fi
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PIN_FILE="${SCRIPT_DIR}/../.devcontainer/josh-room.env"
 if [ "$#" -eq 2 ]; then
   EXPECTED_SHA256="$2"

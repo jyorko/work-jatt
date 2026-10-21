@@ -26,15 +26,17 @@ SHA-256 checksum, and stores it at
 extension installation happens only after the VS Code server is available.
 
 The version and SHA-256 checksum live in
-[.devcontainer/josh-room.env](.devcontainer/josh-room.env). To update them from a
-published release, run from the repository root on the host or inside the
-devcontainer:
+[.devcontainer/josh-room.env](.devcontainer/josh-room.env). To update to the
+latest published release, run from the repository root on the host or inside
+the devcontainer:
 
-    bash .vscode/update-josh-room.sh 0.1.26
+    bash .vscode/update-josh-room.sh
 
-The updater reads the release's `SHA256SUMS`, downloads and verifies the VSIX,
-and only then changes the pin. You can also pass a known SHA-256 as the second
-argument. The devcontainer extension path stays the same across releases.
+The updater finds the latest release on GitHub, reads its `SHA256SUMS`, downloads
+and verifies the VSIX, and only then changes the pin. To pin a specific release,
+pass its version and, optionally, a known SHA-256 checksum.
+
+The devcontainer extension path stays the same across releases.
 Staging uses the current user's `~/.cache/josh-room`; set
 `JOSH_ROOM_CACHE_DIR` to override it.
 
