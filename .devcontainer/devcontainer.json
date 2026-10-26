@@ -12,11 +12,10 @@
         "DEV_CONTAINERS_SKIP_GCOMPAT_INSTALL": "true",
         "HOMEBREW_NO_ANALYTICS": "1",
         "TZ": "Etc/UTC",
-        "REVIEW_UPSTREAM_REF": "main",
-        "BLUEFIN_REVIEW_INHERIT_OMP_CONFIG": "1",
-        "LUNA_FACTORY_ENABLED": "0",
+        "REVIEW_INHERIT_OMP_CONFIG": "1",
+        "LUNA_FACTORY_ENABLED": "1",
         "LUNA_FACTORY_CAPACITY": "3",
-        "REVIEW_TEST_KVM_DEVICE": "/dev/bluefin-no-kvm"
+        "REVIEW_RUNTIME": "auto"
     },
     "remoteEnv": {
         "SHELL": "/bin/zsh",

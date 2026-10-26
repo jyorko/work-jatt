@@ -29,24 +29,21 @@ printf '\n=== Dev container environment ===\n'
 for variable_name in \
   DEV_CONTAINERS_SKIP_GCOMPAT_INSTALL \
   HOMEBREW_NO_ANALYTICS \
-  REVIEW_UPSTREAM_REF \
-  BLUEFIN_REVIEW_INHERIT_OMP_CONFIG \
+  REVIEW_INHERIT_OMP_CONFIG \
   LUNA_FACTORY_ENABLED \
   LUNA_FACTORY_CAPACITY; do
   require_environment "${variable_name}"
 done
 
-printf '\n=== Review source ===\n'
-git -C "${HOME}/src/review" log -1 --oneline
 printf '\n=== Installed Review package ===\n'
-brew list --versions joshyorko/review-dev/bluefin-review-dev
+brew list --versions joshyorko/tools/review
 printf '\n=== Review runtime ===\n'
 require_command gh
 require_command apptainer
 require_command squashfuse
 require_command gocryptfs
 require_command fuse2fs
-require_command bluefin
+require_command review
 require_command yq
 require_command codex
 printf '\n'
@@ -62,5 +59,4 @@ else
 fi
 printf '\nReview runtime check complete.\n'
 echo 'Next: gh auth login'
-echo 'Review source: ~/src/review (upstream/main)'
-echo 'Run: bluefin review projectbluefin/review'
+echo 'Run: review owner/repo'
