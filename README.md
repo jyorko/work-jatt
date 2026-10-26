@@ -13,7 +13,7 @@ personal setup and avoiding a Dockerless build on Kubernetes.
 
 The post-create hook delegates to named scripts in
 [.devcontainer/scripts](.devcontainer/scripts), which install the Review
-dependencies, prepare the upstream source checkout, build `fuse2fs` when it is
+dependencies and the stable Homebrew Review package, build `fuse2fs` when it is
 missing, and verify the runtime. The post-start hook runs
 [.devcontainer/scripts/ensure-review-runtime.sh](.devcontainer/scripts/ensure-review-runtime.sh),
 which verifies the runtime and reruns the bootstrap only when required state is
@@ -47,11 +47,13 @@ Homebrew, and the Codex CLI via its official installer
 (`curl -fsSL https://chatgpt.com/codex/install.sh | sh`, which stages the binary at
 `~/.local/bin/codex`). The final check reports a clear error if a required
 command is still missing.
-Review inherits the shared OMP configuration via `BLUEFIN_REVIEW_INHERIT_OMP_CONFIG`.
+Review is installed or upgraded from `joshyorko/tools/review`. Run
+`review owner/repo` with an explicit GitHub repository scope. Review inherits
+the shared OMP configuration via `REVIEW_INHERIT_OMP_CONFIG`.
 
-The source updater is safe to rerun: it refuses to touch a checkout with local
-changes or a branch that has diverged from upstream instead of force-resetting
-it. The Homebrew prefix remains part of the image rather than the persistent
+Bootstrap no longer creates or updates `~/src/review`; existing checkouts and
+user data are left untouched. The Homebrew prefix remains part of the image
+rather than the persistent
 `/home/vscode` volume, so a container rebuild may reinstall Homebrew packages.
 
 Josh Room is not on the Visual Studio Marketplace, so the
