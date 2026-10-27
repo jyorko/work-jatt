@@ -13,9 +13,9 @@
         "HOMEBREW_NO_ANALYTICS": "1",
         "TZ": "Etc/UTC",
         "REVIEW_INHERIT_OMP_CONFIG": "1",
-        "LUNA_FACTORY_ENABLED": "1",
+        "LUNA_FACTORY_ENABLED": "0",
         "LUNA_FACTORY_CAPACITY": "3",
-        "REVIEW_RUNTIME": "auto"
+        "REVIEW_RUNTIME": "krun"
     },
     "remoteEnv": {
         "SHELL": "/bin/zsh",
