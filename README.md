@@ -25,6 +25,10 @@ SHA-256 checksum, and stores it at
 `customizations.vscode.extensions` entry points Devsy at that stable path, so
 extension installation happens only after the VS Code server is available.
 
+Each container start also updates `~/.codex/config.toml` to use GPT-5.6 Luna
+through Amazon Bedrock in `us-east-1`, with the configured reasoning and
+context limits. Other Codex settings are retained.
+
 The version and SHA-256 checksum live in
 [.devcontainer/josh-room.env](.devcontainer/josh-room.env). To update to the
 latest published release, run from the repository root on the host or inside
