@@ -12,8 +12,8 @@ fi
 
 yq -p toml -o toml -i '
   .model_provider = "amazon-bedrock" |
-  .model = "openai.gpt-5.6-luna" |
-  .model_reasoning_effort = "xhigh" |
+  .model = "openai.gpt-6-luna" |
+  .model_reasoning_effort = "low" |
   .model_context_window = 1000000 |
   .model_auto_compact_token_limit = 900000 |
   .approvals_reviewer = "user" |
