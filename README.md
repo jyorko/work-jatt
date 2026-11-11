@@ -24,6 +24,19 @@ brew services restart t3code-cli-main
 The task reports competing T3 servers or listeners without stopping them. After
 recreating the container, rerun the task to reinstall the formula if needed.
 
+The post-start hook also checks the `vscode` user manager and bus. The pinned
+Wolfi image gives `/etc/shadow` mode `000`, which can cause AppArmor to deny
+PAM's account lookup and leave `user@1000.service` failed with `224/PAM`.
+The hook repairs that specific root-owned file to mode `0600` (root access only)
+and starts the image's user-manager setup unit when needed.
+
+If the installer reports a missing user bus, it prints the manager's status.
+Repair the runtime manually inside the attached container with:
+
+```sh
+bash .devcontainer/scripts/ensure-systemd-user-manager.sh
+```
+
 ## Josh Room extension
 
 This repository runs in a dev container. The lifecycle hooks in

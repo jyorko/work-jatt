@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
+/bin/bash "${SCRIPT_DIR}/ensure-systemd-user-manager.sh"
+
 if /bin/bash "${SCRIPT_DIR}/check-review-runtime.sh"; then
   /bin/bash "${SCRIPT_DIR}/stage-josh-room.sh"
   /bin/bash "${SCRIPT_DIR}/configure-codex.sh"

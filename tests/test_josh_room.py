@@ -107,6 +107,8 @@ exit 22
         stable.unlink()
         check = self.root / ".devcontainer/scripts/check-review-runtime.sh"
         check.write_text("#!/usr/bin/env bash\nexit 0\n")
+        manager = self.root / ".devcontainer/scripts/ensure-systemd-user-manager.sh"
+        manager.write_text("#!/usr/bin/env bash\nexit 0\n")
         result = self.run_script(".devcontainer/scripts/ensure-review-runtime.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(stable.read_bytes(), PAYLOAD)

@@ -19,6 +19,11 @@ diagnostics() {
         --property=ActiveState,SubState,Result,MainPID,ExecMainStatus,NRestarts >&2 || true
 }
 
+user_manager_fail() {
+    systemctl status "user@${uid}.service" --no-pager >&2 || true
+    fail "$* Repair the container runtime with: /bin/bash \"${script_dir}/../.devcontainer/scripts/ensure-systemd-user-manager.sh\""
+}
+
 [[ "$(id -un)" == vscode && "$(id -u)" -ne 0 ]] || \
     fail 'Run this task inside the attached Dev Container as the non-root vscode user.'
 [[ "${HOME}" == /home/vscode ]] || fail 'Use the vscode account HOME=/home/vscode.'
@@ -37,13 +42,13 @@ fi
 uid="$(id -u)"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/${uid}}"
 export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=${XDG_RUNTIME_DIR}/bus}"
-[[ -S "${XDG_RUNTIME_DIR}/bus" ]] || fail "The vscode user bus is missing. ${prerequisite}"
-systemctl is-active --quiet "user@${uid}.service" || fail "The vscode user manager is unavailable. ${prerequisite}"
-systemctl --user is-active --quiet default.target || fail "Cannot reach the vscode user manager. ${prerequisite}"
+[[ -S "${XDG_RUNTIME_DIR}/bus" ]] || user_manager_fail "The vscode user bus is missing at ${XDG_RUNTIME_DIR}/bus."
+systemctl is-active --quiet "user@${uid}.service" || user_manager_fail 'The vscode user manager is unavailable.'
+systemctl --user is-active --quiet default.target || user_manager_fail 'Cannot reach the vscode user manager.'
 busctl --user call org.freedesktop.systemd1 /org/freedesktop/systemd1 org.freedesktop.DBus.Peer Ping >/dev/null || \
-    fail "Cannot reach systemd through the user bus. ${prerequisite}"
+    user_manager_fail 'Cannot reach systemd through the user bus.'
 [[ "$(loginctl show-user vscode --property=Linger --value)" == yes ]] || \
-    fail "The vscode user manager needs lingering to survive SSH disconnects. ${prerequisite}"
+    user_manager_fail 'The vscode user manager needs lingering to survive SSH disconnects.'
 manager_state="$(systemctl is-system-running || true)"
 case "${manager_state}" in
     running) ;;

@@ -146,6 +146,8 @@ class TaskTests(unittest.TestCase):
         result, calls = self.run_task()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("user bus is missing", result.stderr)
+        self.assertIn("ensure-systemd-user-manager.sh", result.stderr)
+        self.assertIn("systemctl status user@1000.service --no-pager", calls)
         self.assertFalse(any(call.startswith("brew ") for call in calls))
 
     def test_degraded_system_is_visible_but_required_managers_suffice(self):
