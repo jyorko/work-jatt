@@ -1,5 +1,27 @@
 # Work Jatt
 
+## Start the T3 service
+
+The devcontainer uses the tested `wolfi-systemd` image. T3 starts only through
+the manual VS Code task, not during container bootstrap.
+
+Inside the attached container, choose **Tasks: Run Task → T3: Install and start
+service**. The task installs `joshyorko/tools/t3code-cli-main` only when missing
+and starts its Homebrew systemd user service as `vscode`. It verifies the
+service's process and owned TCP listener before reporting success. Repeated runs
+keep the installed formula version and a healthy service running.
+
+Check or manage the service inside the container as `vscode`:
+
+```sh
+systemctl --user status sh.brew.t3code-cli-main.service
+brew services stop t3code-cli-main
+brew services restart t3code-cli-main
+```
+
+The task reports competing T3 servers or listeners without stopping them. After
+recreating the container, rerun the task to reinstall the formula if needed.
+
 ## Josh Room extension
 
 This repository runs in a dev container. The lifecycle hooks in

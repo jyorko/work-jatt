@@ -1,7 +1,7 @@
 {
     "$schema": "../.vscode/devsy-devcontainer.schema.json",
     "name": "Room of Requirement - Review Lab",
-    "image": "ghcr.io/joshyorko/room-of-requirement:wolfi-systemd",
+    "image": "ghcr.io/joshyorko/room-of-requirement:wolfi-systemd@sha256:654fe3ba96249fb4812cf888e6179a43cc2f6c3c6b0ec1154b982645dc212fe3",
     "remoteUser": "vscode",
     "privileged": true,
     "overrideCommand": false,

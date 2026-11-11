@@ -1,0 +1,13 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "T3: Install and start service",
+            "type": "process",
+            "command": "/bin/bash",
+            "args": ["${workspaceFolder}/.vscode/install-t3-service.sh"],
+            "problemMatcher": [],
+            "runOptions": {"instanceLimit": 1}
+        }
+    ]
+}
