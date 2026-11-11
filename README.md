@@ -10,6 +10,8 @@ service**. The task installs `joshyorko/tools/t3code-cli-main` only when missing
 and starts its Homebrew systemd user service as `vscode`. It verifies the
 service's process and owned TCP listener before reporting success. Repeated runs
 keep the installed formula version and a healthy service running.
+The task uses `python3`, or the image's `python3.13` when `python3` is not
+on its PATH; activating a workspace virtual environment is not required.
 
 Check or manage the service inside the container as `vscode`:
 

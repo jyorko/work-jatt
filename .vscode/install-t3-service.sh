@@ -26,7 +26,13 @@ diagnostics() {
 for command in brew systemctl busctl loginctl flock; do
     command -v "${command}" >/dev/null || fail "Missing ${command}. ${prerequisite}"
 done
-command -v python3 >/dev/null || fail 'Missing python3. Complete the Work-Jatt devcontainer bootstrap before running this task.'
+if command -v python3 >/dev/null; then
+    python=python3
+elif command -v python3.13 >/dev/null; then
+    python=python3.13
+else
+    fail 'Missing python3 or python3.13. Install Python 3 in the devcontainer before running this task.'
+fi
 
 uid="$(id -u)"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/${uid}}"
@@ -53,7 +59,7 @@ flock -n 9 || fail 'Another T3 service setup is running. Wait for it to finish.'
 trap 'diagnostics' ERR
 
 service_pid="$(systemctl --user show "${unit}" --property=MainPID --value 2>/dev/null || true)"
-python3 "${script_dir}/check-t3-service.py" preflight "${service_pid:-0}"
+"${python}" "${script_dir}/check-t3-service.py" preflight "${service_pid:-0}"
 if ! brew list --versions "${formula}" >/dev/null 2>&1; then
     echo '==> Installing the Homebrew T3 formula'
     # Trusting the qualified formula also taps it, without validating unrelated casks.
@@ -66,7 +72,7 @@ prefix="$(brew --prefix "${formula}")"
 
 # Check again after installation in case another terminal started a server.
 service_pid="$(systemctl --user show "${unit}" --property=MainPID --value 2>/dev/null || true)"
-python3 "${script_dir}/check-t3-service.py" preflight "${service_pid:-0}"
+"${python}" "${script_dir}/check-t3-service.py" preflight "${service_pid:-0}"
 echo '==> Starting the Homebrew systemd user service'
 brew services start "${formula}"
 
@@ -75,7 +81,7 @@ deadline=$((SECONDS + 30))
 while (( SECONDS < deadline )); do
     if systemctl --user is-active --quiet "${unit}"; then
         service_pid="$(systemctl --user show "${unit}" --property=MainPID --value)"
-        if verification="$(python3 "${script_dir}/check-t3-service.py" verify "${service_pid}" "${prefix}" 2>&1)"; then
+        if verification="$("${python}" "${script_dir}/check-t3-service.py" verify "${service_pid}" "${prefix}" 2>&1)"; then
             # Do not accept a listener from a process that the unit has already replaced.
             if systemctl --user is-active --quiet "${unit}" && \
                 [[ "$(systemctl --user show "${unit}" --property=MainPID --value)" == "${service_pid}" ]]; then

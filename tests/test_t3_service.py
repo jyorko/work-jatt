@@ -20,6 +20,13 @@ SPEC.loader.exec_module(CHECKS)
 
 GUARD = r'''
 set -E
+command() {
+    if [[ "$1" == -v && ( "$2" == python3 || "$2" == python3.13 ) ]]; then
+        [[ "$2" == "${TEST_PYTHON:-python3}" ]]
+    else
+        builtin command "$@"
+    fi
+}
 id() { case "$1" in -un) echo "${TEST_USER:-vscode}";; -u) echo 1000;; esac; }
 cat() { if [[ "$1" == /proc/1/comm ]]; then echo "${TEST_INIT:-systemd}"; else command cat "$@"; fi; }
 loginctl() { echo yes; }
@@ -42,8 +49,10 @@ brew() {
         *) return 1;;
     esac
 }
-python3() {
-    printf 'check %s\n' "$2" >> "$CALL_LOG"
+mock_python() {
+    local interpreter="$1"
+    shift
+    printf 'check %s %s\n' "$2" "$interpreter" >> "$CALL_LOG"
     if [[ "$2" == preflight && "${TEST_CONFLICT:-no}" == yes ]]; then
         echo 'Competing T3 server. No process was stopped.' >&2
         return 1
@@ -54,6 +63,8 @@ python3() {
     fi
     echo 'MainPID=4321, UID=1000, one T3 server, owned TCP port(s)=[3773].'
 }
+python3() { mock_python python3 "$@"; }
+python3.13() { mock_python python3.13 "$@"; }
 sleep() { SECONDS=$((SECONDS + 1)); }
 '''
 
@@ -95,8 +106,20 @@ class TaskTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("brew install --formula joshyorko/tools/t3code-cli-main", calls)
         self.assertIn("brew services start joshyorko/tools/t3code-cli-main", calls)
-        self.assertIn("check verify", calls)
+        self.assertIn("check verify python3", calls)
         self.assertIn("PASS:", result.stdout)
+
+    def test_versioned_python_is_used_when_python3_is_missing(self):
+        result, calls = self.run_task(TEST_PYTHON="python3.13")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls.count("check preflight python3.13"), 2)
+        self.assertIn("check verify python3.13", calls)
+
+    def test_missing_python_fails_before_homebrew(self):
+        result, calls = self.run_task(TEST_PYTHON="none")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Missing python3 or python3.13", result.stderr)
+        self.assertFalse(any(call.startswith("brew ") for call in calls))
 
     def test_existing_install_is_not_upgraded_or_restarted(self):
         result, calls = self.run_task(TEST_INSTALLED="yes")
@@ -151,7 +174,7 @@ class TaskTests(unittest.TestCase):
         self.assertIn("within 30 seconds", result.stderr)
         self.assertIn("owns no TCP listener", result.stderr)
         self.assertNotIn("PASS:", result.stdout)
-        self.assertLessEqual(calls.count("check verify"), 30)
+        self.assertLessEqual(calls.count("check verify python3"), 30)
 
     def test_failed_start_returns_diagnostics(self):
         result, calls = self.run_task(TEST_START="broken")
