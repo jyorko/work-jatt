@@ -13,6 +13,16 @@ keep the installed formula version and a healthy service running.
 The task uses `python3`, or the image's `python3.13` when `python3` is not
 on its PATH; activating a workspace virtual environment is not required.
 
+Codex in T3 reads its Bedrock key, and T3 its GitHub token, only from the
+process environment. Devsy injects `AWS_BEARER_TOKEN_BEDROCK`, `GH_TOKEN` and
+`GITHUB_TOKEN` into its sessions, but the systemd service never sees them. So
+the task copies them and the AWS region into `~/.config/t3code/service.env`
+(mode `0600`), and a unit drop-in loads that file. A value missing from the
+task's shell keeps its stored copy. Run the task from a Devsy shell, and rerun
+it after a key rotates. It doesn't restart a running service: if the service
+lacks the current values, the task prints the restart command. Restarting ends
+running T3 agent sessions.
+
 Check or manage the service inside the container as `vscode`:
 
 ```sh

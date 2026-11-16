@@ -35,7 +35,7 @@ systemctl() {
     printf 'systemctl %s\n' "$*" >> "$CALL_LOG"
     case "$*" in
         is-system-running) echo "${TEST_STATE:-running}";;
-        *--property=MainPID*) echo 4321;;
+        *--property=MainPID*) echo "${TEST_MAINPID:-4321}";;
         *is-active*) [[ "${TEST_MANAGER:-healthy}" == healthy ]];;
     esac
 }
@@ -83,7 +83,10 @@ class TaskTests(unittest.TestCase):
 
     def run_task(self, **overrides):
         environment = dict(os.environ, HOME="/home/vscode", XDG_RUNTIME_DIR=str(self.directory),
+                           XDG_CONFIG_HOME=str(self.directory / "config"),
                            BASH_ENV=str(self.guard), CALL_LOG=str(self.log))
+        for name in ("AWS_BEARER_TOKEN_BEDROCK", "AWS_REGION", "AWS_DEFAULT_REGION", "GH_TOKEN", "GITHUB_TOKEN"):
+            environment.pop(name, None)
         environment.update(overrides)
         result = subprocess.run(["/bin/bash", str(ROOT / ".vscode/install-t3-service.sh")],
                                 env=environment, text=True, capture_output=True, timeout=5)
@@ -184,6 +187,90 @@ class TaskTests(unittest.TestCase):
         self.assertTrue(any("--property=ActiveState,SubState,Result,MainPID,ExecMainStatus,NRestarts" in call
                             for call in calls))
         self.assertNotIn("PASS:", result.stdout)
+
+    @property
+    def environment_file(self):
+        return self.directory / "config/t3code/service.env"
+
+    @property
+    def drop_in(self):
+        return self.directory / "config/systemd/user/sh.brew.t3code-cli-main.service.d/service-env.conf"
+
+    def stored(self):
+        return dict(line.split("=", 1) for line in self.environment_file.read_text().splitlines()
+                    if line and not line.startswith("#"))
+
+    def test_devsy_credentials_reach_the_unit_without_a_restart(self):
+        result, calls = self.run_task(AWS_BEARER_TOKEN_BEDROCK="ABSKtest+key/123=", AWS_REGION="us-east-1",
+                                      GH_TOKEN="gho_test1", GITHUB_TOKEN="ghp_test2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.environment_file.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.stored(), {"AWS_BEARER_TOKEN_BEDROCK": "ABSKtest+key/123=", "AWS_REGION": "us-east-1",
+                                         "AWS_DEFAULT_REGION": "us-east-1", "GH_TOKEN": "gho_test1",
+                                         "GITHUB_TOKEN": "ghp_test2"})
+        self.assertEqual(self.drop_in.read_text(), f"[Service]\nEnvironmentFile=-{self.environment_file}\n")
+        reload = calls.index("systemctl --user daemon-reload")
+        self.assertLess(reload, calls.index("brew services start joshyorko/tools/t3code-cli-main"))
+        for secret in ("ABSKtest", "gho_test1", "ghp_test2"):
+            self.assertNotIn(secret, result.stdout + result.stderr)
+        self.assertNotIn("WARNING:", result.stderr)
+        self.assertIn("NOTE: The running service lacks the current Devsy credentials", result.stdout)
+        self.assertFalse(any("restart" in call or "stop" in call for call in calls))
+
+    def test_unchanged_drop_in_skips_the_daemon_reload(self):
+        self.run_task(AWS_BEARER_TOKEN_BEDROCK="ABSKtest")
+        self.log.unlink()
+        result, calls = self.run_task(AWS_BEARER_TOKEN_BEDROCK="ABSKtest")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("systemctl --user daemon-reload", calls)
+
+    def test_service_with_current_credentials_needs_no_restart_note(self):
+        self.run_task(AWS_BEARER_TOKEN_BEDROCK="ABSKtest", GITHUB_TOKEN="ghp_test")
+        process = subprocess.Popen(["sleep", "30"], env=dict(os.environ, **self.stored()))
+        self.addCleanup(process.wait)
+        self.addCleanup(process.kill)
+        result, _ = self.run_task(TEST_MAINPID=str(process.pid))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("NOTE:", result.stdout)
+
+    def test_values_missing_from_the_shell_keep_their_stored_copies(self):
+        self.run_task(AWS_BEARER_TOKEN_BEDROCK="ABSKold", AWS_REGION="us-west-2")
+        result, _ = self.run_task(GITHUB_TOKEN="ghp_new")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.stored(), {"AWS_BEARER_TOKEN_BEDROCK": "ABSKold", "AWS_REGION": "us-west-2",
+                                         "AWS_DEFAULT_REGION": "us-west-2", "GITHUB_TOKEN": "ghp_new"})
+        self.assertNotIn("WARNING:", result.stderr)
+        result, _ = self.run_task(AWS_BEARER_TOKEN_BEDROCK="ABSKnew")
+        self.assertEqual(self.stored()["AWS_BEARER_TOKEN_BEDROCK"], "ABSKnew")
+        self.assertEqual(self.stored()["GITHUB_TOKEN"], "ghp_new")
+
+    def test_missing_tokens_without_credentials_warn_and_still_start(self):
+        result, calls = self.run_task()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("AWS_BEARER_TOKEN_BEDROCK is not set", result.stderr)
+        self.assertIn("GH_TOKEN and GITHUB_TOKEN are not set", result.stderr)
+        self.assertFalse(self.environment_file.exists())
+        self.assertTrue(self.drop_in.exists())
+        self.assertNotIn("NOTE:", result.stdout)
+        self.assertIn("brew services start joshyorko/tools/t3code-cli-main", calls)
+
+    def test_missing_github_token_warns_but_keeps_bedrock(self):
+        result, _ = self.run_task(AWS_BEARER_TOKEN_BEDROCK="ABSKtest")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("GH_TOKEN and GITHUB_TOKEN are not set", result.stderr)
+        self.assertNotIn("AWS_BEARER_TOKEN_BEDROCK is not set", result.stderr)
+        self.assertEqual(self.stored()["AWS_BEARER_TOKEN_BEDROCK"], "ABSKtest")
+
+    def test_unsafe_token_fails_before_start_without_writing(self):
+        for name in ("AWS_BEARER_TOKEN_BEDROCK", "GITHUB_TOKEN"):
+            with self.subTest(name=name):
+                self.log.unlink(missing_ok=True)
+                result, calls = self.run_task(**{name: "bad value\nX=1"})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f"{name} has characters", result.stderr)
+                self.assertNotIn("bad value", result.stderr)
+                self.assertFalse(self.environment_file.exists())
+                self.assertNotIn("brew services start joshyorko/tools/t3code-cli-main", calls)
 
 
 class ProcfsTests(unittest.TestCase):
