@@ -29,12 +29,12 @@ can fail with `could not read Username for 'https://github.com': terminal
 prompts disabled`. The task, and each container start, run
 [.devcontainer/scripts/configure-github-git.sh](.devcontainer/scripts/configure-github-git.sh).
 When `gh` is authenticated for github.com (`GH_TOKEN`, `GITHUB_TOKEN` or a
-`gh auth login` entry), the script runs `gh auth setup-git --hostname github.com`.
-That adds a github.com-only helper to `~/.gitconfig`, which reads the token
-when git runs. Devsy's helper still handles other hosts. Already-configured
-runs change nothing. Without authentication the script prints `gh auth login`
-as the next step and leaves git alone. The helper applies to new git processes,
-so the T3 service does not need a restart.
+`gh auth login` entry), the script adds a github.com-only helper to
+`~/.gitconfig`, which reads the token when git runs. It leaves any Gist helper
+and Devsy's helper for other hosts unchanged. Already-configured runs change
+nothing. Without authentication the script prints `gh auth login` as the next
+step and leaves git alone. The helper applies to new git processes, so the T3
+service does not need a restart.
 
 Check or manage the service inside the container as `vscode`:
 
