@@ -141,6 +141,11 @@ if [[ ! -f "${drop_in}" || "$(< "${drop_in}")" != "${drop_in_content}" ]]; then
     printf '%s\n' "${drop_in_content}" > "${drop_in}"
     systemctl --user daemon-reload
 fi
+# T3 clones with git prompts disabled, so let gh answer github.com credential
+# requests from the GH_TOKEN or GITHUB_TOKEN that the unit loads above. Pass the
+# stored copies through the environment so a shell without them still counts.
+GH_TOKEN="${carried[GH_TOKEN]:-}" GITHUB_TOKEN="${carried[GITHUB_TOKEN]:-}" \
+    /bin/bash "${script_dir}/../.devcontainer/scripts/configure-github-git.sh"
 
 echo '==> Starting the Homebrew systemd user service'
 brew services start "${formula}"

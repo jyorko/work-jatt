@@ -23,6 +23,19 @@ it after a key rotates. It doesn't restart a running service: if the service
 lacks the current values, the task prints the restart command. Restarting ends
 running T3 agent sessions.
 
+T3 runs git with terminal prompts disabled. Devsy's global git credential
+helper answers only while its SSH agent listens, so HTTPS clones of github.com
+can fail with `could not read Username for 'https://github.com': terminal
+prompts disabled`. The task, and each container start, run
+[.devcontainer/scripts/configure-github-git.sh](.devcontainer/scripts/configure-github-git.sh).
+When `gh` is authenticated for github.com (`GH_TOKEN`, `GITHUB_TOKEN` or a
+`gh auth login` entry), the script runs `gh auth setup-git --hostname github.com`.
+That adds a github.com-only helper to `~/.gitconfig`, which reads the token
+when git runs. Devsy's helper still handles other hosts. Already-configured
+runs change nothing. Without authentication the script prints `gh auth login`
+as the next step and leaves git alone. The helper applies to new git processes,
+so the T3 service does not need a restart.
+
 Check or manage the service inside the container as `vscode`:
 
 ```sh
@@ -97,7 +110,11 @@ The runtime setup installs `gh`, `apptainer`, `squashfuse`, `gocryptfs`, and `yq
 Homebrew, and the Codex CLI via its official installer
 (`curl -fsSL https://chatgpt.com/codex/install.sh | sh`, which stages the binary at
 `~/.local/bin/codex`). The final check reports a clear error if a required
-command is still missing.
+command is still missing. It also warns, without failing, when git has no
+non-interactive github.com credentials or cannot run `git ls-remote` on the
+workspace's origin with `GIT_TERMINAL_PROMPT=0`. This repository is public, so
+set `GITHUB_GIT_CHECK_REPOSITORY=owner/repo` to a private repository to check
+read access. The check discards git's output, so it never prints a credential.
 Review is installed or upgraded from `joshyorko/tools/review`. Run
 `review owner/repo` with an explicit GitHub repository scope. Review inherits
 the shared OMP configuration via `REVIEW_INHERIT_OMP_CONFIG`.
