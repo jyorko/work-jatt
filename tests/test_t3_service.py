@@ -23,6 +23,8 @@ set -E
 command() {
     if [[ "$1" == -v && ( "$2" == python3 || "$2" == python3.13 ) ]]; then
         [[ "$2" == "${TEST_PYTHON:-python3}" ]]
+    elif [[ "$1" == -v && "$2" == gh ]]; then
+        echo /home/linuxbrew/.linuxbrew/bin/gh
     else
         builtin command "$@"
     fi
@@ -66,6 +68,11 @@ mock_python() {
 python3() { mock_python python3 "$@"; }
 python3.13() { mock_python python3.13 "$@"; }
 sleep() { SECONDS=$((SECONDS + 1)); }
+gh() {
+    printf 'gh %s\n' "$*" >> "$CALL_LOG"
+    [[ "$1 $2" == "auth token" && -n "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]]
+}
+git() { printf 'git %s\n' "$*" >> "$CALL_LOG"; return 0; }
 '''
 
 
@@ -260,6 +267,34 @@ class TaskTests(unittest.TestCase):
         self.assertIn("GH_TOKEN and GITHUB_TOKEN are not set", result.stderr)
         self.assertNotIn("AWS_BEARER_TOKEN_BEDROCK is not set", result.stderr)
         self.assertEqual(self.stored()["AWS_BEARER_TOKEN_BEDROCK"], "ABSKtest")
+
+    def test_authenticated_gh_answers_github_git_credentials_before_start(self):
+        result, calls = self.run_task(GH_TOKEN="gho_test1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        auth_check = calls.index("gh auth token --hostname github.com")
+        helper_write = calls.index(
+            "git config --global --add credential.https://github.com.helper !/home/linuxbrew/.linuxbrew/bin/gh auth git-credential"
+        )
+        self.assertLess(auth_check, helper_write)
+        self.assertLess(helper_write, calls.index("brew services start joshyorko/tools/t3code-cli-main"))
+        self.assertFalse(any("gho_test1" in call for call in calls))
+        self.assertNotIn("gho_test1", result.stdout + result.stderr)
+
+    def test_stored_github_token_configures_git_from_a_shell_without_it(self):
+        self.run_task(GITHUB_TOKEN="ghp_stored")
+        result, calls = self.run_task()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("gh auth token --hostname github.com", calls)
+        self.assertTrue(any("git config --global --add credential.https://github.com.helper" in call
+                            for call in calls))
+        self.assertNotIn("ghp_stored", result.stdout + result.stderr)
+
+    def test_unauthenticated_gh_leaves_git_alone_and_still_starts(self):
+        result, calls = self.run_task()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Next: gh auth login", result.stderr)
+        self.assertNotIn("git config --global --replace-all credential.https://github.com.helper ''", calls)
+        self.assertIn("brew services start joshyorko/tools/t3code-cli-main", calls)
 
     def test_unsafe_token_fails_before_start_without_writing(self):
         for name in ("AWS_BEARER_TOKEN_BEDROCK", "GITHUB_TOKEN"):

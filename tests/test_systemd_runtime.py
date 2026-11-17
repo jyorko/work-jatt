@@ -139,6 +139,7 @@ class SystemdRuntimeTests(unittest.TestCase):
         shutil.copyfile(ROOT / ".devcontainer/scripts/ensure-review-runtime.sh", startup)
         for filename, label in (
             ("ensure-systemd-user-manager.sh", "manager"),
+            ("configure-github-git.sh", "github"),
             ("check-review-runtime.sh", "review"),
             ("stage-josh-room.sh", "extension"),
             ("configure-codex.sh", "configuration"),
@@ -153,7 +154,7 @@ class SystemdRuntimeTests(unittest.TestCase):
         self.log.unlink()
         result, calls = self.run_script(startup)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(calls, ["manager", "review", "extension", "configuration"])
+        self.assertEqual(calls, ["manager", "github", "review", "extension", "configuration"])
 
 
 if __name__ == "__main__":

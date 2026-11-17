@@ -2,6 +2,7 @@
 set -euo pipefail
 
 export PATH="${HOME}/.local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin:${PATH}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 require_environment() {
   local variable_name="$1"
@@ -11,6 +12,40 @@ require_environment() {
   else
     echo "ERROR: required devcontainer environment variable is missing: ${variable_name}" >&2
     return 2
+  fi
+}
+
+# Git as T3 runs it: no terminal or askpass prompt, and bounded on a stalled
+# network. Callers discard its output so no credential is printed.
+non_interactive_git() {
+  GIT_TERMINAL_PROMPT=0 GIT_ASKPASS='' SSH_ASKPASS='' timeout 30 git "$@"
+}
+
+# Reports, without failing the check, whether git can authenticate to
+# github.com and read a repository without prompting.
+check_github_git() {
+  local repository="${GITHUB_GIT_CHECK_REPOSITORY:-}" origin
+
+  if printf 'protocol=https\nhost=github.com\n\n' | non_interactive_git credential fill 2>/dev/null | \
+    grep '^password=' >/dev/null; then
+    echo 'github.com git credentials: READY'
+  else
+    echo 'WARNING: git has no non-interactive credentials for github.com.'
+    echo '         Next: gh auth login, then bash .devcontainer/scripts/configure-github-git.sh'
+  fi
+
+  if [ -z "${repository}" ]; then
+    origin="$(git -C "${SCRIPT_DIR}" remote get-url origin 2>/dev/null || true)"
+    if [[ "${origin}" =~ ^https://([^/@]*@)?github\.com/([^/]+/[^/]+)$ ]]; then
+      repository="${BASH_REMATCH[2]%.git}"
+    fi
+  fi
+  if [ -z "${repository}" ]; then
+    echo 'NOTE: set GITHUB_GIT_CHECK_REPOSITORY=owner/repo to check reading a github.com repository.'
+  elif non_interactive_git ls-remote "https://github.com/${repository}.git" HEAD >/dev/null 2>&1; then
+    echo "git ls-remote https://github.com/${repository}: READY"
+  else
+    echo "WARNING: git cannot read https://github.com/${repository} without prompting."
   fi
 }
 
@@ -57,6 +92,8 @@ if [ -e /dev/kvm ]; then
 else
   echo 'WARNING: /dev/kvm is missing'
 fi
+printf '\n=== GitHub over HTTPS ===\n'
+check_github_git
 printf '\nReview runtime check complete.\n'
 echo 'Next: gh auth login'
 echo 'Run: review owner/repo'

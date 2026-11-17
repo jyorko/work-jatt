@@ -22,4 +22,5 @@ run_script install-review-package.sh
 run_script build-fuse2fs.sh
 run_script stage-josh-room.sh
 
+run_script configure-github-git.sh
 run_script check-review-runtime.sh
