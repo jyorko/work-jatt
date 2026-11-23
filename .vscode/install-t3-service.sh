@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
-export HOMEBREW_NO_ANALYTICS=1
-export HOMEBREW_NO_AUTO_UPDATE=1
-formula=joshyorko/tools/t3code-cli-main
-unit=sh.brew.t3code-cli-main.service
+export PATH="${HOME}/.local/bin:${PATH}"
+export T3CODE_CHANNEL="${T3CODE_CHANNEL:-nightly}"
+unit=t3code.service
+cli="${HOME}/.local/bin/t3"
 script_dir="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)"
 prerequisite='Use the wolfi-systemd devcontainer from https://github.com/joshyorko/work-jatt/issues/5.'
 
@@ -41,9 +40,8 @@ service_has_environment() {
 
 [[ "$(id -un)" == vscode && "$(id -u)" -ne 0 ]] || \
     fail 'Run this task inside the attached Dev Container as the non-root vscode user.'
-[[ "${HOME}" == /home/vscode ]] || fail 'Use the vscode account HOME=/home/vscode.'
 [[ "$(cat /proc/1/comm)" == systemd ]] || fail "PID 1 is not systemd. ${prerequisite}"
-for command in brew systemctl busctl loginctl flock; do
+for command in curl systemctl busctl loginctl flock readlink; do
     command -v "${command}" >/dev/null || fail "Missing ${command}. ${prerequisite}"
 done
 if command -v python3 >/dev/null; then
@@ -78,21 +76,42 @@ exec 9>"${XDG_RUNTIME_DIR}/work-jatt-t3-service.lock"
 flock -n 9 || fail 'Another T3 service setup is running. Wait for it to finish.'
 trap 'diagnostics' ERR
 
-service_pid="$(systemctl --user show "${unit}" --property=MainPID --value 2>/dev/null || true)"
-"${python}" "${script_dir}/check-t3-service.py" preflight "${service_pid:-0}"
-if ! brew list --versions "${formula}" >/dev/null 2>&1; then
-    echo '==> Installing the Homebrew T3 formula'
-    # Trusting the qualified formula also taps it, without validating unrelated casks.
-    brew trust --formula "${formula}"
-    brew install --formula "${formula}"
-else
-    echo '==> Keeping the installed T3 formula version'
+if systemctl --user is-active --quiet sh.brew.t3code-cli-main.service; then
+    fail 'The retired Homebrew T3 service is still running. Finish active work, then run brew services stop t3code-cli-main and brew uninstall t3code-cli-main before retrying.'
 fi
-prefix="$(brew --prefix "${formula}")"
 
-# Check again after installation in case another terminal started a server.
-service_pid="$(systemctl --user show "${unit}" --property=MainPID --value 2>/dev/null || true)"
-"${python}" "${script_dir}/check-t3-service.py" preflight "${service_pid:-0}"
+case "$(readlink -f -- "${cli}" 2>/dev/null || true)" in
+    */Cellar/t3code-cli-main/*|*/opt/t3code-cli-main/*)
+        fail 'The user t3 launcher still points to the retired Homebrew package. Remove that link after stopping its service, then rerun this task.'
+        ;;
+esac
+
+if [[ ! -x "${cli}" ]]; then
+    echo "==> Installing the official T3 ${T3CODE_CHANNEL} CLI"
+    installer="$(mktemp "${TMPDIR:-/tmp}/work-jatt-t3-install.XXXXXX")"
+    trap 'rm -f -- "${installer}"' EXIT
+    curl --fail --silent --show-error --location --output "${installer}" https://t3.codes/install.sh
+    T3CODE_INSTALL_BIN_DIR="${HOME}/.local/bin" sh "${installer}"
+else
+    echo '==> Keeping the installed upstream T3 CLI version'
+fi
+[[ -x "${cli}" ]] || fail 'The official installer did not provide ~/.local/bin/t3.'
+
+# The native service reads this persistent file rather than the IDE task environment.
+"${python}" - <<'PYENV'
+from pathlib import Path
+import os
+import re
+
+home = Path(os.environ.get("T3CODE_HOME", str(Path.home() / ".t3")))
+home.mkdir(parents=True, exist_ok=True)
+path = home / "service.env"
+contents = path.read_text() if path.exists() else ""
+if not re.search(r"^\s*(?:export\s+)?T3CODE_TELEMETRY_ENABLED\s*=", contents, re.M):
+    with path.open("a") as output:
+        output.write(("\n" if contents and not contents.endswith("\n") else "") + "T3CODE_TELEMETRY_ENABLED=false\n")
+    path.chmod(0o600)
+PYENV
 
 # Codex reads its Bedrock key, and T3 its GitHub token, only from the process
 # environment. Devsy injects them into its SSH sessions, which systemd services
@@ -147,29 +166,23 @@ fi
 GH_TOKEN="${carried[GH_TOKEN]:-}" GITHUB_TOKEN="${carried[GITHUB_TOKEN]:-}" \
     /bin/bash "${script_dir}/../.devcontainer/scripts/configure-github-git.sh"
 
-echo '==> Starting the Homebrew systemd user service'
-brew services start "${formula}"
+echo '==> Installing or repairing the upstream systemd user service'
+"${cli}" service install
+"${cli}" service status
 
-verification='The service did not become active.'
+# Readiness and duplicate-server checks belong to upstream; check the actual unit too.
 deadline=$((SECONDS + 30))
 while (( SECONDS < deadline )); do
     if systemctl --user is-active --quiet "${unit}"; then
+        diagnostics
+        echo "PASS: ${unit} is active as vscode; upstream service setup completed."
         service_pid="$(systemctl --user show "${unit}" --property=MainPID --value)"
-        if verification="$("${python}" "${script_dir}/check-t3-service.py" verify "${service_pid}" "${prefix}" 2>&1)"; then
-            # Do not accept a listener from a process that the unit has already replaced.
-            if systemctl --user is-active --quiet "${unit}" && \
-                [[ "$(systemctl --user show "${unit}" --property=MainPID --value)" == "${service_pid}" ]]; then
-                brew services info "${formula}"
-                diagnostics
-                echo "PASS: ${unit} runs as vscode. ${verification}"
-                if [[ -f "${environment_file}" ]] && ! service_has_environment "${service_pid}"; then
-                    echo "NOTE: The running service lacks the current Devsy credentials. Restart it to apply them; this ends running T3 agent sessions: systemctl --user restart ${unit}"
-                fi
-                exit 0
-            fi
+        if [[ -f "${environment_file}" ]] && ! service_has_environment "${service_pid}"; then
+            echo "NOTE: The running service lacks the current Devsy credentials. Restart it to apply them; this ends running T3 agent sessions: systemctl --user restart ${unit}"
         fi
+        exit 0
     fi
     sleep 1
 done
 diagnostics
-fail "T3 was not ready within 30 seconds: ${verification}"
+fail 'The upstream T3 service did not become active within 30 seconds.'

@@ -6,12 +6,19 @@ The devcontainer uses the tested `wolfi-systemd` image. T3 starts only through
 the manual VS Code task, not during container bootstrap.
 
 Inside the attached container, choose **Tasks: Run Task → T3: Install and start
-service**. The task installs `joshyorko/tools/t3code-cli-main` only when missing
-and starts its Homebrew systemd user service as `vscode`. It verifies the
-service's process and owned TCP listener before reporting success. Repeated runs
-keep the installed formula version and a healthy service running.
-The task uses `python3`, or the image's `python3.13` when `python3` is not
-on its PATH; activating a workspace virtual environment is not required.
+service**. The task installs the official T3 CLI from `https://t3.codes/install.sh`
+when `~/.local/bin/t3` is missing, then runs `t3 service install` and
+`t3 service status` as `vscode`. Upstream manages runtime installation, service
+repair, and readiness checks. Repeated runs retain the installed CLI version.
+Fresh installs default to the nightly channel, matching the reference repo.
+For a new stable installation, run
+`T3CODE_CHANNEL=stable bash .vscode/install-t3-service.sh`.
+The task uses `python3`, or the image's `python3.13` when needed.
+
+The task preserves existing T3 data and settings. It adds
+`T3CODE_TELEMETRY_ENABLED=false` to `${T3CODE_HOME:-$HOME/.t3}/service.env`
+only when no telemetry setting exists. The CLI and its runtimes live in the
+persistent home volume.
 
 Codex in T3 reads its Bedrock key, and T3 its GitHub token, only from the
 process environment. Devsy injects `AWS_BEARER_TOKEN_BEDROCK`, `GH_TOKEN` and
@@ -39,13 +46,26 @@ service does not need a restart.
 Check or manage the service inside the container as `vscode`:
 
 ```sh
-systemctl --user status sh.brew.t3code-cli-main.service
-brew services stop t3code-cli-main
-brew services restart t3code-cli-main
+~/.local/bin/t3 service status
+~/.local/bin/t3 update
+~/.local/bin/t3 service restart
+~/.local/bin/t3 service uninstall
 ```
 
-The task reports competing T3 servers or listeners without stopping them. After
-recreating the container, rerun the task to reinstall the formula if needed.
+The task refuses to proceed while the retired Homebrew service is running or
+`~/.local/bin/t3` still points to its package. Finish active work before migrating:
+
+```sh
+brew services stop t3code-cli-main
+brew uninstall t3code-cli-main
+bash .vscode/install-t3-service.sh
+```
+
+Remove an old `~/.local/bin/t3` symlink if it still points to the retired package.
+Restarting or migrating interrupts active sessions. After container recreation,
+rerun the task to repair the native service. See
+[validation notes](docs/t3-service-validation.md) for the offline checks and
+remaining runtime checks.
 
 The post-start hook also checks the `vscode` user manager and bus. The pinned
 Wolfi image gives `/etc/shadow` mode `000`, which can cause AppArmor to deny
